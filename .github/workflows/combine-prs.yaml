@@ -47,7 +47,7 @@ jobs:
               if (branch.startsWith('${BRANCH_PREFIX}')) {
                 console.log('Branch matched: ' + branch);
                 statusOK = true;
-                if(true) {
+                if(${MUST_BE_GREEN} == true) {
 
                 }
               }
