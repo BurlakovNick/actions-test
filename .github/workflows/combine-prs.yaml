@@ -41,15 +41,13 @@ jobs:
             branches = [];
             prs = [];
             base_branch = null;
-            console.log('${{ env.BRANCH_PREFIX }}');
             for (const pull of pulls) {
               const branch = pull['head']['ref'];
               console.log('Pull for branch: ' + branch);
-              console.log('${BRANCH_PREFIX}');
-              if (branch.startsWith('${BRANCH_PREFIX}')) {
+              if (branch.startsWith('${{ env.BRANCH_PREFIX }}')) {
                 console.log('Branch matched: ' + branch);
                 statusOK = true;
-                if('${COMBINE_STATUS}' == 'green') {
+                if('${{ env.COMBINE_STATUS }}' == 'green') {
                   console.log('Checking green status: ' + branch);
                   const checkRuns = await github.request('GET /repos/{owner}/{repo}/commits/{ref}/check-runs', {
                     owner: context.repo.owner,
@@ -69,7 +67,7 @@ jobs:
                 for(const label of labels) {
                   const labelName = label['name'];
                   console.log('Checking label: ' + labelName);
-                  if(labelName == '${IGNORE_LABEL}') {
+                  if(labelName == '${{ env.IGNORE_LABEL }}') {
                     console.log('Discarding ' + branch + ' with label ' + labelName);
                     statusOK = false;
                   }
@@ -134,7 +132,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: 'Combined PR',
-              head: '${COMBINE_BRANCH_NAME}',
+              head: '${{ env.COMBINE_BRANCH_NAME }}',
               base: '${{ steps.fetch-branch-names.outputs.base-branch }}',
               body: body
             });
