@@ -11,8 +11,8 @@ on:
 env:
   # Branch prefix to find combinable PRs based on
   BRANCH_PREFIX: dependabot
-  # Only combine PRs that are green (status is success)
-  MUST_BE_GREEN: true
+  # If green then only combine PRs that are green (status is success)
+  COMBINE_STATUS: green
   # Name of the branch to combine PRs into
   COMBINE_BRANCH_NAME: combine-prs-branch
   # 'Exclude PRs with this label'
@@ -47,8 +47,36 @@ jobs:
               if (branch.startsWith('${BRANCH_PREFIX}')) {
                 console.log('Branch matched: ' + branch);
                 statusOK = true;
-                if(${MUST_BE_GREEN} == true) {
-
+                if('${COMBINE_STATUS}' == 'green') {
+                  console.log('Checking green status: ' + branch);
+                  const checkRuns = await github.request('GET /repos/{owner}/{repo}/commits/{ref}/check-runs', {
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    ref: branch
+                  });
+                  for await (const cr of checkRuns.data.check_runs) {
+                     console.log('Validating check conclusion: ' + cr.conclusion);
+                     if(cr.conclusion != 'success') {
+                       console.log('Discarding ' + branch + ' with check conclusion ' + cr.conclusion);
+                       statusOK = false;
+                     }
+                  }
+                }
+                console.log('Checking labels: ' + branch);
+                const labels = pull['labels'];
+                for(const label of labels) {
+                  const labelName = label['name'];
+                  console.log('Checking label: ' + labelName);
+                  if(labelName == '${IGNORE_LABEL}') {
+                    console.log('Discarding ' + branch + ' with label ' + labelName);
+                    statusOK = false;
+                  }
+                }
+                if (statusOK) {
+                  console.log('Adding branch to array: ' + branch);
+                  branches.push(branch);
+                  prs.push('#' + pull['number'] + ' ' + pull['title']);
+                  base_branch = pull['base']['ref'];
                 }
               }
             }
