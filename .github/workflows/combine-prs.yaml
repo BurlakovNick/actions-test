@@ -10,13 +10,13 @@ on:
 
 env:
   # Branch prefix to find combinable PRs based on
-  BRANCH_PREFIX: 'dependabot'
+  BRANCH_PREFIX: dependabot
   # Only combine PRs that are green (status is success)
   MUST_BE_GREEN: true
   # Name of the branch to combine PRs into
-  COMBINE_BRANCH_NAME: 'combine-prs-branch'
+  COMBINE_BRANCH_NAME: combine-prs-branch
   # 'Exclude PRs with this label'
-  IGNORE_LABEL: 'nocombine'
+  IGNORE_LABEL: nocombine
 
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
