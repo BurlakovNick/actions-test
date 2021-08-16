@@ -1,0 +1,138 @@
+# Source: https://www.hrvey.com/blog/combine-dependabot-prs
+# Hope one day dependabot will do the same stuff natively
+name: 'Combine PRs'
+
+# Controls when the action will run - in this case triggered manually
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 13 * * 1'
+
+env:
+  # Branch prefix to find combinable PRs based on
+  BRANCH_PREFIX: 'dependabot'
+  # Only combine PRs that are green (status is success)
+  MUST_BE_GREEN: true
+  # Name of the branch to combine PRs into
+  COMBINE_BRANCH_NAME: 'combine-prs-branch'
+  # 'Exclude PRs with this label'
+  IGNORE_LABEL: 'nocombine'
+
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "combine-prs"
+  combine-prs:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - uses: actions/github-script@f05a81df23035049204b043b50c3322045ce7eb3
+        id: fetch-branch-names
+        name: Fetch branch names
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const pulls = await github.paginate('GET /repos/:owner/:repo/pulls', {
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            branches = [];
+            prs = [];
+            base_branch = null;
+            for (const pull of pulls) {
+              const branch = pull['head']['ref'];
+              console.log('Pull for branch: ' + branch);
+              if (branch.startsWith('${BRANCH_PREFIX}')) {
+                console.log('Branch matched: ' + branch);
+                statusOK = true;
+                if(${MUST_BE_GREEN}) {
+                  console.log('Checking green status: ' + branch);
+                  const checkRuns = await github.request('GET /repos/{owner}/{repo}/commits/{ref}/check-runs', {
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    ref: branch
+                  });
+                  for await (const cr of checkRuns.data.check_runs) {
+                     console.log('Validating check conclusion: ' + cr.conclusion);
+                     if(cr.conclusion != 'success') {
+                       console.log('Discarding ' + branch + ' with check conclusion ' + cr.conclusion);
+                       statusOK = false;
+                     }
+                  }
+                }
+                console.log('Checking labels: ' + branch);
+                const labels = pull['labels'];
+                for(const label of labels) {
+                  const labelName = label['name'];
+                  console.log('Checking label: ' + labelName);
+                  if(labelName == '${IGNORE_LABEL}') {
+                    console.log('Discarding ' + branch + ' with label ' + labelName);
+                    statusOK = false;
+                  }
+                }
+                if (statusOK) {
+                  console.log('Adding branch to array: ' + branch);
+                  branches.push(branch);
+                  prs.push('#' + pull['number'] + ' ' + pull['title']);
+                  base_branch = pull['base']['ref'];
+                }
+              }
+            }
+
+            if (branches.length == 0) {
+              core.setFailed('No PRs/branches matched criteria');
+              return;
+            }
+
+            core.setOutput('base-branch', base_branch);
+            core.setOutput('prs-string', prs.join('\n'));
+
+            combined = branches.join(' ')
+            console.log('Combined: ' + combined);
+            return combined
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+        with:
+          fetch-depth: 0
+      # Creates a branch with other PR branches merged together
+      - name: Created combined branch
+        env:
+          BASE_BRANCH: ${{ steps.fetch-branch-names.outputs.base-branch }}
+          BRANCHES_TO_COMBINE: ${{ steps.fetch-branch-names.outputs.result }}
+          COMBINE_BRANCH_NAME: ${COMBINE_BRANCH_NAME}
+        run: |
+          echo "$BRANCHES_TO_COMBINE"
+          sourcebranches="${BRANCHES_TO_COMBINE%\"}"
+          sourcebranches="${sourcebranches#\"}"
+
+          basebranch="${BASE_BRANCH%\"}"
+          basebranch="${basebranch#\"}"
+
+          git config pull.rebase false
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+
+          git branch $COMBINE_BRANCH_NAME $basebranch
+          git checkout $COMBINE_BRANCH_NAME
+          git pull origin $sourcebranches --no-edit
+          git push origin $COMBINE_BRANCH_NAME
+      # Creates a PR with the new combined branch
+      - uses: actions/github-script@f05a81df23035049204b043b50c3322045ce7eb3
+        name: Create Combined Pull Request
+        env:
+          PRS_STRING: ${{ steps.fetch-branch-names.outputs.prs-string }}
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const prString = process.env.PRS_STRING;
+            const body = 'This PR was created by the Combine PRs action by combining the following PRs:\n' + prString;
+            await github.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Combined PR',
+              head: '${COMBINE_BRANCH_NAME}',
+              base: '${{ steps.fetch-branch-names.outputs.base-branch }}',
+              body: body
+            });
