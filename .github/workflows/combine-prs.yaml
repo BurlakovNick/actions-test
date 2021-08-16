@@ -50,22 +50,6 @@ jobs:
                 if(${MUST_BE_GREEN}) {
 
                 }
-                console.log('Checking labels: ' + branch);
-                const labels = pull['labels'];
-                for(const label of labels) {
-                  const labelName = label['name'];
-                  console.log('Checking label: ' + labelName);
-                  if(labelName == '${IGNORE_LABEL}') {
-                    console.log('Discarding ' + branch + ' with label ' + labelName);
-                    statusOK = false;
-                  }
-                }
-                if (statusOK) {
-                  console.log('Adding branch to array: ' + branch);
-                  branches.push(branch);
-                  prs.push('#' + pull['number'] + ' ' + pull['title']);
-                  base_branch = pull['base']['ref'];
-                }
               }
             }
 
