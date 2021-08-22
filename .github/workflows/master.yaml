@@ -7,10 +7,6 @@ on:
     - main
 
 jobs:
-  license_check:
-    runs-on: ubuntu-18.04
-    timeout-minutes: 30
-
   test_lint_bump:
     runs-on: ubuntu-18.04
     timeout-minutes: 30
