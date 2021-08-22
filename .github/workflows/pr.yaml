@@ -29,6 +29,7 @@ jobs:
       uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f  # v2.3.4
       with:
         ref: ${{ github.event.pull_request.head.sha }}
+        fetch-depth: 0
     - name: Get git tag
       id: tag
       run: |
