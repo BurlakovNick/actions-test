@@ -1,0 +1,26 @@
+# PROJECT_ROOT_PATH/.github/workflows/master.yml
+name: master
+
+on:
+  push:
+    branches:
+    - master
+
+jobs:
+  license_check:
+    runs-on: ubuntu-18.04
+    timeout-minutes: 30
+
+  test_lint_bump:
+    runs-on: ubuntu-18.04
+    timeout-minutes: 30
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f  # v2.3.4
+      with:
+        fetch-depth: 0
+    - name: GitHub tag bump
+      uses: anothrNick/github-tag-action@f9e1720f754cd4081d4381b376c7d4a28f0e7bbd  # v1.7.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
