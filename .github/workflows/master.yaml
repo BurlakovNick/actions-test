@@ -1,10 +1,10 @@
 # PROJECT_ROOT_PATH/.github/workflows/master.yml
-name: master
+name: main
 
 on:
   push:
     branches:
-    - master
+    - main
 
 jobs:
   license_check:
