@@ -26,8 +26,8 @@ jobs:
       - name: Build wheels
         run: |
           pip install wheel
-          pip wheel --wheel-dir=wheelhouse grpcio --python-version ${{ matrix.python-version}}
-          pip wheel --wheel-dir=wheelhouse rapidfuzz --python-version ${{ matrix.python-version}}
+          pip wheel --wheel-dir=wheelhouse grpcio
+          pip wheel --wheel-dir=wheelhouse rapidfuzz
           python mypy/misc/build_wheel.py  
       - uses: actions/upload-artifact@v2
         with:
